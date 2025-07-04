@@ -37,18 +37,22 @@ class ParkingBloc extends Bloc<ParkingEvent, ParkingState> {
   ) async {
     emit(state.loading());
     try {
-      final slots = await getAllSlotsUseCase.execute();
       final activeTickets = await getActiveTicketsUseCase.execute();
-      final updatedSlots = state.slots.map((slot) {
-        if (slot.id == event.slotId) {
-          return slot.copyWith(isOccupied: true);
-        }
-        return slot;
-      }).toList();
-      emit(state.success(
-        slots: updatedSlots,
-        activeTickets: activeTickets,
-      ));
+
+      if (state.slots.isEmpty) {
+        final slots = await getAllSlotsUseCase.execute();
+        emit(state.success(slots: slots, activeTickets: activeTickets));
+      } else {
+        final updatedSlots = state.slots.map((slot) {
+          if (slot.id == event.slotId) {
+            return slot.copyWith(isOccupied: true);
+          }
+          return slot;
+        }).toList();
+        emit(state.success(
+          slots: updatedSlots,
+        ));
+      }
     } catch (e) {
       emit(state.error(e.toString()));
     }

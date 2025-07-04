@@ -90,7 +90,7 @@ class SummaryCard extends StatelessWidget {
 
 class ParkingGrid extends StatelessWidget {
   final List<ParkingSlot> slots;
-  final Function(BuildContext, ParkingSlot) onUnpark;
+  final Function(BuildContext, ParkingSlot, ParkingBloc) onUnpark;
 
   const ParkingGrid({
     super.key,
@@ -122,7 +122,7 @@ class ParkingGrid extends StatelessWidget {
 
 class SlotCard extends StatelessWidget {
   final ParkingSlot slot;
-  final Function(BuildContext, ParkingSlot) onUnpark;
+  final Function(BuildContext, ParkingSlot, ParkingBloc) onUnpark;
 
   const SlotCard({
     super.key,
@@ -146,7 +146,7 @@ class SlotCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (slot.isOccupied) {
-          onUnpark(context, slot);
+          onUnpark(context, slot, context.read<ParkingBloc>());
         } else {
           context.read<ParkingBloc>().add(ParkVehicle(slot.id));
         }
@@ -195,7 +195,8 @@ class ParkingLotScreen extends StatefulWidget {
 }
 
 class _ParkingLotScreenState extends State<ParkingLotScreen> {
-  void _showPricingDialog(BuildContext context, ParkingState state) {
+  late ParkingBloc _parkingBloc;
+  void _showPricingDialog(BuildContext context, ParkingBloc bloc) {
     showDialog(
       context: context,
       builder: (context) => SimpleDialog(
@@ -203,21 +204,21 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
         children: [
           SimpleDialogOption(
             onPressed: () {
-              context.read<ParkingBloc>().add(SelectPricingType('hourly'));
+              bloc.add(SelectPricingType('hourly'));
               Navigator.pop(context);
             },
             child: const Text('HOURLY'),
           ),
           SimpleDialogOption(
             onPressed: () {
-              context.read<ParkingBloc>().add(SelectPricingType('daily'));
+              bloc.add(SelectPricingType('daily'));
               Navigator.pop(context);
             },
             child: const Text('DAILY'),
           ),
           SimpleDialogOption(
             onPressed: () {
-              context.read<ParkingBloc>().add(SelectPricingType('vip'));
+              bloc.add(SelectPricingType('vip'));
               Navigator.pop(context);
             },
             child: const Text('VIP'),
@@ -227,7 +228,8 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
     );
   }
 
-  void _showUnparkDialog(BuildContext context, ParkingSlot slot) {
+  void _showUnparkDialog(
+      BuildContext context, ParkingSlot slot, ParkingBloc bloc) {
     final ticket = ParkingTicket(
       slotId: slot.id,
       entryTime: DateTime.now().subtract(const Duration(hours: 2)),
@@ -253,7 +255,6 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              final bloc = context.read<ParkingBloc>();
               bloc.add(
                 UnparkVehicle(ticket, bloc.state.selectedPricingType),
               );
@@ -273,7 +274,7 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
         slots: state.slots.where((slot) => slot.isOccupied).toList(),
         onUnpark: (slot) {
           Navigator.pop(context);
-          _showUnparkDialog(context, slot);
+          _showUnparkDialog(context, slot, _parkingBloc);
         },
       ),
     );
@@ -283,7 +284,8 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ParkingBloc>().add(LoadParkingSlots());
+      _parkingBloc = context.read<ParkingBloc>();
+      _parkingBloc.add(LoadParkingSlots());
     });
   }
 
@@ -291,26 +293,26 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
   Widget build(BuildContext context) {
     return BlocConsumer<ParkingBloc, ParkingState>(
       listener: (context, state) {
-        if (state.isSuccess) {
-          if (state.lastParkedTicket != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Vehicle parked in slot #${state.lastParkedTicket!.slotId}'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-          if (state.lastUnparkResult != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Vehicle unparked. Fee: \$${state.lastUnparkResult!.price.toStringAsFixed(2)} (${state.lastUnparkResult!.pricingStrategy})'),
-                backgroundColor: Colors.blue,
-              ),
-            );
-          }
-        }
+        // if (state.isSuccess) {
+        //   if (state.lastParkedTicket != null) {
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       SnackBar(
+        //         content: Text(
+        //             'Vehicle parked in slot #${state.lastParkedTicket!.slotId}'),
+        //         backgroundColor: Colors.green,
+        //       ),
+        //     );
+        //   }
+        //   if (state.lastUnparkResult != null) {
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       SnackBar(
+        //         content: Text(
+        //             'Vehicle unparked. Fee: \$${state.lastUnparkResult!.price.toStringAsFixed(2)} (${state.lastUnparkResult!.pricingStrategy})'),
+        //         backgroundColor: Colors.blue,
+        //       ),
+        //     );
+        //   }
+        // }
       },
       builder: (context, state) {
         return Scaffold(
@@ -322,7 +324,8 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
                   foregroundColor: Colors.white,
                   actions: [
                     TextButton.icon(
-                      onPressed: () => _showPricingDialog(context, state),
+                      onPressed: () =>
+                          _showPricingDialog(context, _parkingBloc),
                       icon: Text(
                         state.selectedPricingType.toUpperCase(),
                         style: const TextStyle(color: Colors.white),

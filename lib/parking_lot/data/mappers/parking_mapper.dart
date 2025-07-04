@@ -1,12 +1,14 @@
-import '../../domain/entities/parking_entities.dart';
+import '../../domain/entities/vehicle_entities.dart';
 import '../models/parking_dto.dart';
 
 extension ParkingSlotMapper on ParkingSlotDto {
   ParkingSlot toDomain() {
     return ParkingSlot(
       id: id,
-      isVip: isVip,
+      size: size,
+      type: type,
       isOccupied: isOccupied,
+      occupiedBy: occupiedBy,
     );
   }
 }
@@ -14,8 +16,12 @@ extension ParkingSlotMapper on ParkingSlotDto {
 extension ParkingTicketMapper on ParkingTicketDto {
   ParkingTicket toDomain() {
     return ParkingTicket(
+      id: id,
+      licensePlate: licensePlate,
       slotId: slotId,
       entryTime: DateTime.parse(entryTime),
+      vehicleSize: vehicleSize,
+      vehicleType: vehicleType,
       exitTime: exitTime != null ? DateTime.parse(exitTime!) : null,
       price: price,
     );

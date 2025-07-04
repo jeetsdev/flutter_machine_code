@@ -2,7 +2,7 @@
 
 import 'dart:async';
 
-import '../../domain/entities/parking_entities.dart';
+import '../../domain/entities/vehicle_entities.dart';
 import '../../domain/usecases/parking_usecases.dart';
 
 class ParkingController {
@@ -66,13 +66,15 @@ class ParkingController {
     }
   }
 
-  Future<void> parkVehicle(int slotId) async {
+  Future<void> parkVehicle(int slotId, Vehicle vehicle) async {
     try {
-      await parkVehicleUseCase.execute(slotId);
-      _messageController.add('Vehicle parked successfully in slot $slotId');
-      await loadInitialData(); // Refresh data
+      final ticket = await parkVehicleUseCase.execute(slotId, vehicle);
+      _messageController.add(
+          'Vehicle ${vehicle.licensePlate} parked successfully in slot ${ticket.slotId}');
+      await refreshSlots();
     } catch (e) {
       _errorController.add('Failed to park vehicle: $e');
+      rethrow;
     }
   }
 

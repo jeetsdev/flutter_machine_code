@@ -1,9 +1,11 @@
 // Presentation Layer: BLoC
 
 import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/usecases/parking_usecases.dart';
+
 import '../../domain/strategies/pricing_strategies.dart';
+import '../../domain/usecases/parking_usecases.dart';
 import 'parking_event.dart';
 import 'parking_state.dart';
 
@@ -13,40 +15,51 @@ class ParkingBloc extends Bloc<ParkingEvent, ParkingState> {
   final GetAllSlotsUseCase getAllSlotsUseCase;
   final GetActiveTicketsUseCase getActiveTicketsUseCase;
 
-  StreamSubscription? _slotsSubscription;
+  Timer? _autoRefreshTimer;
 
   ParkingBloc({
     required this.parkVehicleUseCase,
     required this.unparkVehicleUseCase,
     required this.getAllSlotsUseCase,
     required this.getActiveTicketsUseCase,
-  }) : super(ParkingInitial()) {
+  }) : super(const ParkingInitial()) {
     on<LoadParkingSlots>(_onLoadParkingSlots);
     on<ParkVehicle>(_onParkVehicle);
     on<UnparkVehicle>(_onUnparkVehicle);
     on<SelectPricingType>(_onSelectPricingType);
     on<RefreshSlots>(_onRefreshSlots);
     on<LoadActiveTickets>(_onLoadActiveTickets);
+
+    // Start auto-refresh timer
+    _startAutoRefresh();
   }
 
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      add(RefreshSlots());
+    });
+  }
 
   Future<void> _onLoadParkingSlots(
     LoadParkingSlots event,
     Emitter<ParkingState> emit,
   ) async {
-    emit(ParkingLoading());
+    emit(const ParkingLoading());
     try {
       final slots = await getAllSlotsUseCase.execute();
       final activeTickets = await getActiveTicketsUseCase.execute();
+      final trafficLevel =
+          slots.where((s) => s.isOccupied).length / slots.length;
 
       emit(ParkingLoaded(
         slots: slots,
         activeTickets: activeTickets,
-        selectedPricingType: 'hourly',
-        trafficLevel: slots.where((s) => s.isOccupied).length / slots.length,
+        selectedPricingType: event.pricingType ?? 'hourly',
+        trafficLevel: trafficLevel,
       ));
     } catch (e) {
-      emit(ParkingError(e.toString()));
+      emit(ParkingError('Failed to load data: $e'));
     }
   }
 
@@ -55,13 +68,17 @@ class ParkingBloc extends Bloc<ParkingEvent, ParkingState> {
     Emitter<ParkingState> emit,
   ) async {
     try {
-      final ticket = await parkVehicleUseCase.execute(event.slotId);
-      emit(VehicleParked(ticket));
+      final ticket =
+          await parkVehicleUseCase.execute(event.slotId, event.vehicle);
+      emit(VehicleParked(
+        ticket,
+        'Vehicle ${event.vehicle.licensePlate} parked successfully in slot ${ticket.slotId}',
+      ));
 
       // Reload data after parking
       add(LoadParkingSlots());
     } catch (e) {
-      emit(ParkingError(e.toString()));
+      emit(ParkingError('Failed to park vehicle: $e'));
     }
   }
 
@@ -75,18 +92,21 @@ class ParkingBloc extends Bloc<ParkingEvent, ParkingState> {
         event.pricingType,
       );
 
-      // Get pricing strategy name for display
       final pricingStrategy = PricingCalculator.getPricingStrategy(
         type: event.pricingType,
         trafficLevel: 0.5, // Default value for display
       );
 
-      emit(VehicleUnparked(price, pricingStrategy.strategyName));
+      emit(VehicleUnparked(
+        price,
+        pricingStrategy.strategyName,
+        'Vehicle unparked. Total cost: \$${price.toStringAsFixed(2)}',
+      ));
 
       // Reload data after unparking
       add(LoadParkingSlots());
     } catch (e) {
-      emit(ParkingError(e.toString()));
+      emit(ParkingError('Failed to unpark vehicle: $e'));
     }
   }
 
@@ -96,7 +116,10 @@ class ParkingBloc extends Bloc<ParkingEvent, ParkingState> {
   ) async {
     if (state is ParkingLoaded) {
       final currentState = state as ParkingLoaded;
-      emit(currentState.copyWith(selectedPricingType: event.pricingType));
+      emit(currentState.copyWith(
+        selectedPricingType: event.pricingType,
+        message: 'Pricing type changed to ${event.pricingType}',
+      ));
     }
   }
 
@@ -104,7 +127,20 @@ class ParkingBloc extends Bloc<ParkingEvent, ParkingState> {
     RefreshSlots event,
     Emitter<ParkingState> emit,
   ) async {
-    add(LoadParkingSlots());
+    if (state is ParkingLoaded) {
+      final currentState = state as ParkingLoaded;
+      try {
+        final slots = await getAllSlotsUseCase.execute();
+        final activeTickets = await getActiveTicketsUseCase.execute();
+        emit(currentState.copyWith(
+          slots: slots,
+          activeTickets: activeTickets,
+          trafficLevel: slots.where((s) => s.isOccupied).length / slots.length,
+        ));
+      } catch (e) {
+        emit(ParkingError('Failed to refresh slots: $e'));
+      }
+    }
   }
 
   Future<void> _onLoadActiveTickets(
@@ -117,14 +153,14 @@ class ParkingBloc extends Bloc<ParkingEvent, ParkingState> {
         final currentState = state as ParkingLoaded;
         emit(currentState.copyWith(activeTickets: activeTickets));
       } catch (e) {
-        emit(ParkingError(e.toString()));
+        emit(ParkingError('Failed to load active tickets: $e'));
       }
     }
   }
 
   @override
   Future<void> close() {
-    _slotsSubscription?.cancel();
+    _autoRefreshTimer?.cancel();
     return super.close();
   }
 }

@@ -1,14 +1,19 @@
 // Presentation Layer: BLoC Events
 
 import '../../domain/entities/parking_entities.dart';
+import '../../domain/entities/vehicle_entities.dart';
 
 abstract class ParkingEvent {}
 
-class LoadParkingSlots extends ParkingEvent {}
+class LoadParkingSlots extends ParkingEvent {
+  final String? pricingType;
+  LoadParkingSlots([this.pricingType]);
+}
 
 class ParkVehicle extends ParkingEvent {
   final int slotId;
-  ParkVehicle(this.slotId);
+  final Vehicle vehicle;
+  ParkVehicle(this.slotId, this.vehicle);
 }
 
 class UnparkVehicle extends ParkingEvent {

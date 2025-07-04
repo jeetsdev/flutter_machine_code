@@ -1,6 +1,6 @@
 // Domain Layer: Use Cases
 
-import '../entities/parking_entities.dart';
+import '../entities/vehicle_entities.dart';
 import '../repositories/parking_repository.dart';
 import '../strategies/pricing_strategies.dart';
 
@@ -9,15 +9,19 @@ class ParkVehicleUseCase {
 
   ParkVehicleUseCase(this.repository);
 
-  Future<ParkingTicket> execute(int slotId) async {
+  Future<ParkingTicket> execute(int slotId, Vehicle vehicle) async {
     try {
       final availableSlots = await repository.getAvailableSlots();
-      final targetSlot = availableSlots.firstWhere(
+      final slot = availableSlots.firstWhere(
         (slot) => slot.id == slotId,
         orElse: () => throw Exception('Slot $slotId is not available'),
       );
 
-      return await repository.parkVehicle(slotId);
+      if (!vehicle.canFitInSlot(slot)) {
+        throw Exception('Vehicle cannot be parked in this slot type/size');
+      }
+
+      return await repository.parkVehicle(slotId, vehicle);
     } catch (e) {
       throw Exception('Failed to park vehicle: $e');
     }
@@ -33,15 +37,19 @@ class UnparkVehicleUseCase {
     try {
       final trafficLevel = await repository.getTrafficLevel();
       final duration = DateTime.now().difference(ticket.entryTime);
-      
+
       final pricingStrategy = PricingCalculator.getPricingStrategy(
         type: pricingType,
         trafficLevel: trafficLevel,
       );
 
       final price = pricingStrategy.calculatePrice(duration);
+      ticket.copyWith(
+        exitTime: DateTime.now(),
+        price: price,
+      );
       await repository.unparkVehicle(ticket);
-      
+
       return price;
     } catch (e) {
       throw Exception('Failed to unpark vehicle: $e');
@@ -90,4 +98,3 @@ class GetActiveTicketsUseCase {
     }
   }
 }
-

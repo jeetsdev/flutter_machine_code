@@ -1,51 +1,72 @@
+import '../../domain/entities/vehicle_entities.dart';
+
 class ParkingSlotDto {
   final int id;
-  final bool isVip;
+  final SlotSize size;
+  final SlotType type;
   final bool isOccupied;
+  final String? occupiedBy;
 
   ParkingSlotDto({
     required this.id,
-    required this.isVip,
+    required this.size,
+    this.type = SlotType.regular,
     required this.isOccupied,
+    this.occupiedBy,
   });
 
   factory ParkingSlotDto.fromJson(Map<String, dynamic> json) {
     return ParkingSlotDto(
       id: json['id'] as int,
-      isVip: json['isVip'] as bool,
+      size: SlotSize.values.byName((json['size'] as String).toLowerCase()),
+      type: SlotType.values.byName((json['type'] as String).toLowerCase()),
       isOccupied: json['isOccupied'] as bool,
+      occupiedBy: json['occupiedBy'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'isVip': isVip,
+      'size': size.name,
+      'type': type.name,
       'isOccupied': isOccupied,
+      'occupiedBy': occupiedBy,
     };
   }
 }
 
 class ParkingTicketDto {
-  final String ticketId;
+  final String id;
+  final String licensePlate;
   final int slotId;
   final String entryTime;
+  final VehicleSize vehicleSize;
+  final VehicleType vehicleType;
   final String? exitTime;
   final double? price;
 
   ParkingTicketDto({
-    required this.ticketId,
+    required this.id,
+    required this.licensePlate,
     required this.slotId,
     required this.entryTime,
+    required this.vehicleSize,
+    required this.vehicleType,
     this.exitTime,
     this.price,
   });
 
   factory ParkingTicketDto.fromJson(Map<String, dynamic> json) {
     return ParkingTicketDto(
-      ticketId: json['ticketId'] as String,
+      id: json['id'] as String,
+      licensePlate: json['licensePlate'] as String,
       slotId: json['slotId'] as int,
       entryTime: json['entryTime'] as String,
+      vehicleSize: VehicleSize.values
+          .byName((json['vehicleSize'] as String).toLowerCase()),
+      vehicleType: VehicleType.values
+          .byName((json['vehicleType'] as String).toLowerCase()),
       exitTime: json['exitTime'] as String?,
       price: json['price'] as double?,
     );
@@ -53,11 +74,14 @@ class ParkingTicketDto {
 
   Map<String, dynamic> toJson() {
     return {
-      'ticketId': ticketId,
+      'id': id,
+      'licensePlate': licensePlate,
       'slotId': slotId,
       'entryTime': entryTime,
-      if (exitTime != null) 'exitTime': exitTime,
-      if (price != null) 'price': price,
+      'vehicleSize': vehicleSize.name,
+      'vehicleType': vehicleType.name,
+      'exitTime': exitTime,
+      'price': price,
     };
   }
 }

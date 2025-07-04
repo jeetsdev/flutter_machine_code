@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:test_app/animations/stopwatch.dart';
-import 'package:test_app/parking_lot/parking_lot.dart';
+import 'package:test_app/parking_lot/presentation/parking_lot_screen.dart';
 
 void main() {
   runApp(const MyApp());

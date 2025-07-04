@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+
 import '../models/api_response.dart';
 
 class ParkingRemoteSource {
@@ -14,6 +15,8 @@ class ParkingRemoteSource {
       data: [
         {'id': 1, 'isVip': false, 'isOccupied': false},
         {'id': 2, 'isVip': false, 'isOccupied': false},
+        for (var i = 3; i <= 22; i++)
+          {'id': i, 'isVip': false, 'isOccupied': false},
         // In real implementation, this would be:
         // final response = await _dio.get('\$_baseUrl/slots/available');
         // return ApiResponse.fromJson(response.data);
@@ -29,6 +32,9 @@ class ParkingRemoteSource {
       data: [
         {'id': 1, 'isVip': false, 'isOccupied': false},
         {'id': 2, 'isVip': false, 'isOccupied': true},
+        // 20 more unoccupied, non-VIP slots
+        for (var i = 3; i <= 22; i++)
+          {'id': i, 'isVip': false, 'isOccupied': false},
         {'id': 51, 'isVip': true, 'isOccupied': false},
       ],
       status: 'success',
@@ -49,7 +55,8 @@ class ParkingRemoteSource {
     );
   }
 
-  Future<ApiResponse<Map<String, dynamic>>> unparkVehicle(String ticketId) async {
+  Future<ApiResponse<Map<String, dynamic>>> unparkVehicle(
+      String ticketId) async {
     await Future.delayed(const Duration(milliseconds: 200));
     return ApiResponse(
       data: {
@@ -69,7 +76,9 @@ class ParkingRemoteSource {
         {
           'ticketId': 'TKT-123',
           'slotId': 1,
-          'entryTime': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+          'entryTime': DateTime.now()
+              .subtract(const Duration(hours: 2))
+              .toIso8601String(),
         },
       ],
       status: 'success',

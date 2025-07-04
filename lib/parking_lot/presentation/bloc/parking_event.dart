@@ -4,7 +4,10 @@ import '../../domain/entities/parking_entities.dart';
 
 abstract class ParkingEvent {}
 
-class LoadParkingSlots extends ParkingEvent {}
+class LoadParkingSlots extends ParkingEvent {
+  final int slotId;
+  LoadParkingSlots({this.slotId = 0});
+}
 
 class ParkVehicle extends ParkingEvent {
   final int slotId;

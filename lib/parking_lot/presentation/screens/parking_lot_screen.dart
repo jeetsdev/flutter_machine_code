@@ -1,100 +1,51 @@
-// Presentation Layer: Parking Lot UI
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/parking_entities.dart';
-import '../../injection/parking_injection.dart';
-import '../controllers/parking_controller.dart';
+import '../bloc/parking_bloc.dart';
+import '../bloc/parking_event.dart';
+import '../bloc/parking_state.dart';
 
-class ParkingLotScreen extends StatefulWidget {
-  const ParkingLotScreen({super.key});
+class SummaryItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
 
-  @override
-  State<ParkingLotScreen> createState() => _ParkingLotScreenState();
-}
-
-class _ParkingLotScreenState extends State<ParkingLotScreen> {
-  late ParkingController controller;
-  List<ParkingSlot> slots = [];
-  List<ParkingTicket> activeTickets = [];
-
-  @override
-  void initState() {
-    super.initState();
-    controller = ParkingDependencyInjection.getParkingController();
-    _setupListeners();
-  }
-
-  void _setupListeners() {
-    controller.slotsStream.listen((newSlots) {
-      setState(() => slots = newSlots);
-    });
-
-    controller.ticketsStream.listen((tickets) {
-      setState(() => activeTickets = tickets);
-    });
-
-    controller.errorStream.listen((error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: Colors.red),
-      );
-    });
-
-    controller.messageStream.listen((message) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.green),
-      );
-    });
-  }
+  const SummaryItem({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Parking Lot Management'),
-        backgroundColor: Colors.blue.shade800,
-        foregroundColor: Colors.white,
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) => controller.setPricingType(value),
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'hourly', child: Text('Hourly')),
-              const PopupMenuItem(value: 'daily', child: Text('Daily')),
-              const PopupMenuItem(value: 'vip', child: Text('VIP')),
-            ],
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(controller.selectedPricingType.toUpperCase()),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildSummaryCard(),
-          const SizedBox(height: 16),
-          Expanded(child: _buildSlotsGrid()),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showActiveTicketsDialog(),
-        backgroundColor: Colors.blue.shade800,
-        child: const Icon(Icons.receipt, color: Colors.white),
-      ),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+      ],
     );
   }
+}
 
-  Widget _buildSummaryCard() {
-    final occupiedSlots = slots.where((slot) => slot.isOccupied).length;
-    final availableSlots = slots.length - occupiedSlots;
-    final trafficLevel = slots.isNotEmpty ? occupiedSlots / slots.length : 0.0;
+class SummaryCard extends StatelessWidget {
+  final ParkingState state;
 
+  const SummaryCard({super.key, required this.state});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -106,35 +57,49 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('Total', '${slots.length}', Colors.blue),
-          _buildSummaryItem('Available', '$availableSlots', Colors.green),
-          _buildSummaryItem('Occupied', '$occupiedSlots', Colors.orange),
-          _buildSummaryItem(
-              'Traffic',
-              '${(trafficLevel * 100).toInt()}%',
-              trafficLevel > 0.8
-                  ? Colors.red
-                  : trafficLevel > 0.6
-                      ? Colors.orange
-                      : Colors.green),
+          SummaryItem(
+            label: 'Total',
+            value: '${state.slots.length}',
+            color: Colors.blue,
+          ),
+          SummaryItem(
+            label: 'Available',
+            value:
+                '${state.slots.length - state.slots.where((slot) => slot.isOccupied).length}',
+            color: Colors.green,
+          ),
+          SummaryItem(
+            label: 'Occupied',
+            value: '${state.slots.where((slot) => slot.isOccupied).length}',
+            color: Colors.orange,
+          ),
+          SummaryItem(
+            label: 'Traffic',
+            value: '${(state.trafficLevel * 100).toInt()}%',
+            color: state.trafficLevel > 0.8
+                ? Colors.red
+                : state.trafficLevel > 0.6
+                    ? Colors.orange
+                    : Colors.green,
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSummaryItem(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(value,
-            style: TextStyle(
-                fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-        Text(label,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-      ],
-    );
-  }
+class ParkingGrid extends StatelessWidget {
+  final List<ParkingSlot> slots;
+  final Function(BuildContext, ParkingSlot) onUnpark;
 
-  Widget _buildSlotsGrid() {
+  const ParkingGrid({
+    super.key,
+    required this.slots,
+    required this.onUnpark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -146,28 +111,46 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
       itemCount: slots.length,
       itemBuilder: (context, index) {
         final slot = slots[index];
-        return _buildSlotCard(slot);
+        return SlotCard(
+          slot: slot,
+          onUnpark: onUnpark,
+        );
       },
     );
   }
+}
 
-  Widget _buildSlotCard(ParkingSlot slot) {
+class SlotCard extends StatelessWidget {
+  final ParkingSlot slot;
+  final Function(BuildContext, ParkingSlot) onUnpark;
+
+  const SlotCard({
+    super.key,
+    required this.slot,
+    required this.onUnpark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     Color cardColor;
     IconData icon;
-    VoidCallback? onTap;
 
     if (slot.isOccupied) {
       cardColor = Colors.red.shade100;
       icon = Icons.car_rental;
-      onTap = () => _showUnparkDialog(slot);
     } else {
       cardColor = slot.isVip ? Colors.purple.shade100 : Colors.green.shade100;
       icon = slot.isVip ? Icons.star : Icons.local_parking;
-      onTap = () => _parkVehicle(slot.id);
     }
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        if (slot.isOccupied) {
+          onUnpark(context, slot);
+        } else {
+          context.read<ParkingBloc>().add(ParkVehicle(slot.id));
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           color: cardColor,
@@ -180,48 +163,87 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon,
-                size: 20,
-                color: slot.isOccupied
-                    ? Colors.red
-                    : slot.isVip
-                        ? Colors.purple
-                        : Colors.green),
+            Icon(
+              icon,
+              size: 20,
+              color: slot.isOccupied
+                  ? Colors.red
+                  : slot.isVip
+                      ? Colors.purple
+                      : Colors.green,
+            ),
             const SizedBox(height: 4),
-            Text('${slot.id}',
-                style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            if (slot.isVip)
-              const Text('VIP',
-                  style: TextStyle(fontSize: 8, color: Colors.purple)),
+            Text(
+              '#${slot.id}',
+              style: TextStyle(
+                color: slot.isOccupied ? Colors.red : Colors.grey.shade700,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  void _parkVehicle(int slotId) {
-    controller.parkVehicle(slotId);
+class ParkingLotScreen extends StatefulWidget {
+  const ParkingLotScreen({super.key});
+
+  @override
+  State<ParkingLotScreen> createState() => _ParkingLotScreenState();
+}
+
+class _ParkingLotScreenState extends State<ParkingLotScreen> {
+  void _showPricingDialog(BuildContext context, ParkingState state) {
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Select Pricing Type'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              context.read<ParkingBloc>().add(SelectPricingType('hourly'));
+              Navigator.pop(context);
+            },
+            child: const Text('HOURLY'),
+          ),
+          SimpleDialogOption(
+            onPressed: () {
+              context.read<ParkingBloc>().add(SelectPricingType('daily'));
+              Navigator.pop(context);
+            },
+            child: const Text('DAILY'),
+          ),
+          SimpleDialogOption(
+            onPressed: () {
+              context.read<ParkingBloc>().add(SelectPricingType('vip'));
+              Navigator.pop(context);
+            },
+            child: const Text('VIP'),
+          ),
+        ],
+      ),
+    );
   }
 
-  void _showUnparkDialog(ParkingSlot slot) {
-    final ticket = activeTickets.firstWhere(
-      (ticket) => ticket.slotId == slot.id,
-      orElse: () => ParkingTicket(slotId: slot.id, entryTime: DateTime.now()),
+  void _showUnparkDialog(BuildContext context, ParkingSlot slot) {
+    final ticket = ParkingTicket(
+      slotId: slot.id,
+      entryTime: DateTime.now().subtract(const Duration(hours: 2)),
     );
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Unpark Vehicle - Slot ${slot.id}'),
+        title: const Text('Unpark Vehicle'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Entry Time: ${ticket.entryTime.toString().substring(0, 16)}'),
-            Text(
-                'Duration: ${DateTime.now().difference(ticket.entryTime).inHours}h ${DateTime.now().difference(ticket.entryTime).inMinutes % 60}m'),
-            Text('Pricing: ${controller.selectedPricingType.toUpperCase()}'),
+            Text('Slot: #${slot.id}'),
+            const SizedBox(height: 8),
+            const Text('Calculate fee based on time...'),
           ],
         ),
         actions: [
@@ -231,57 +253,163 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
           ),
           ElevatedButton(
             onPressed: () {
+              final bloc = context.read<ParkingBloc>();
+              bloc.add(
+                UnparkVehicle(ticket, bloc.state.selectedPricingType),
+              );
               Navigator.pop(context);
-              controller.unparkVehicle(ticket);
             },
-            child: const Text('Unpark'),
+            child: const Text('Confirm'),
           ),
         ],
       ),
     );
   }
 
-  void _showActiveTicketsDialog() {
+  void _showActiveTicketsDialog(BuildContext context, ParkingState state) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Active Tickets'),
-        content: SizedBox(
-          width: 300,
-          height: 400,
-          child: activeTickets.isEmpty
-              ? const Center(child: Text('No active tickets'))
-              : ListView.builder(
-                  itemCount: activeTickets.length,
-                  itemBuilder: (context, index) {
-                    final ticket = activeTickets[index];
-                    final duration =
-                        DateTime.now().difference(ticket.entryTime);
-                    return Card(
-                      child: ListTile(
-                        title: Text('Slot ${ticket.slotId}'),
-                        subtitle: Text(
-                            'Entry: ${ticket.entryTime.toString().substring(0, 16)}'),
-                        trailing: Text(
-                            '${duration.inHours}h ${duration.inMinutes % 60}m'),
-                      ),
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
+      builder: (context) => ActiveTicketsDialog(
+        slots: state.slots.where((slot) => slot.isOccupied).toList(),
+        onUnpark: (slot) {
+          Navigator.pop(context);
+          _showUnparkDialog(context, slot);
+        },
       ),
     );
   }
 
   @override
-  void dispose() {
-    // Note: Don't dispose the controller here as it's managed by injection
-    super.dispose();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ParkingBloc>().add(LoadParkingSlots());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<ParkingBloc, ParkingState>(
+      listener: (context, state) {
+        if (state.isSuccess) {
+          if (state.lastParkedTicket != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Vehicle parked in slot #${state.lastParkedTicket!.slotId}'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+          if (state.lastUnparkResult != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Vehicle unparked. Fee: \$${state.lastUnparkResult!.price.toStringAsFixed(2)} (${state.lastUnparkResult!.pricingStrategy})'),
+                backgroundColor: Colors.blue,
+              ),
+            );
+          }
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          appBar: state.isInitial || state.isLoading
+              ? null
+              : AppBar(
+                  title: const Text('Parking Lot Management'),
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  actions: [
+                    TextButton.icon(
+                      onPressed: () => _showPricingDialog(context, state),
+                      icon: Text(
+                        state.selectedPricingType.toUpperCase(),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      label: const Icon(Icons.arrow_drop_down,
+                          color: Colors.white),
+                    ),
+                  ],
+                ),
+          body: Builder(
+            builder: (context) {
+              if (state.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (state.isError) {
+                return Center(child: Text(state.errorMessage!));
+              }
+
+              if (state.isSuccess) {
+                return Column(
+                  children: [
+                    SummaryCard(state: state),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ParkingGrid(
+                        slots: state.slots,
+                        onUnpark: _showUnparkDialog,
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return const Center(child: Text('No parking slots available'));
+            },
+          ),
+          floatingActionButton: state.isSuccess
+              ? FloatingActionButton(
+                  onPressed: () => _showActiveTicketsDialog(context, state),
+                  backgroundColor: Colors.blue,
+                  child: const Icon(Icons.receipt, color: Colors.white),
+                )
+              : null,
+        );
+      },
+    );
+  }
+}
+
+class ActiveTicketsDialog extends StatelessWidget {
+  final List<ParkingSlot> slots;
+  final Function(ParkingSlot) onUnpark;
+
+  const ActiveTicketsDialog({
+    super.key,
+    required this.slots,
+    required this.onUnpark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Active Tickets'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: slots.isEmpty
+            ? const Center(child: Text('No active tickets'))
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: slots.length,
+                itemBuilder: (context, index) {
+                  final slot = slots[index];
+                  return ListTile(
+                    title: Text('Slot #${slot.id}'),
+                    subtitle: const Text('Occupied'),
+                    onTap: () => onUnpark(slot),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
   }
 }

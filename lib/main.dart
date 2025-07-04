@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test_app/animations/stopwatch.dart';
-import 'package:test_app/parking_lot/parking_lot.dart';
+import 'package:test_app/parking_lot/presentation/screens/simple_parking_screen.dart';
+
+import 'parking_lot/injection/parking_injection.dart';
+import 'parking_lot/presentation/screens/parking_lot_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -77,7 +81,10 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const ParkingLotScreen()),
+                      builder: (context) => BlocProvider(
+      create: (context) => ParkingDependencyInjection.getParkingBloc(),
+                            child: const ParkingLotScreen(),
+                          )),
                 );
               },
               style: ElevatedButton.styleFrom(

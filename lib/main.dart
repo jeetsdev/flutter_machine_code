@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:test_app/animations/stopwatch.dart';
-import 'package:test_app/parking_lot/presentation/parking_lot_screen.dart';
+import 'package:test_app/features/parking_system/presentation/screens/parking_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -77,7 +77,7 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const ParkingLotScreen()),
+                      builder: (context) => const ParkingScreen()),
                 );
               },
               style: ElevatedButton.styleFrom(

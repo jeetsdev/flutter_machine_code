@@ -1,23 +1,28 @@
-// Domain Layer: Repository Interface for Remote API Operations
-
-import '../entities/vehicle_entities.dart';
+import '../entities/entry_gate.dart';
+import '../entities/parking_lot.dart';
+import '../entities/parking_slot.dart';
+import '../entities/vehicle.dart';
 
 abstract class ParkingRepository {
-  /// Fetch all available parking slots from the server
+  /// Get the parking lot information
+  Future<ParkingLot> getParkingLot();
+
+  /// Find the nearest available parking slot for a vehicle from a specific entry gate
+  Future<ParkingSlot?> findNearestAvailableSlot(
+      Vehicle vehicle, EntryGate entryGate);
+
+  /// Park a vehicle in a specific slot
+  Future<bool> parkVehicle(Vehicle vehicle, String slotId);
+
+  /// Unpark a vehicle from its current slot
+  Future<Vehicle?> unparkVehicle(String vehicleId);
+
+  /// Get all available slots
   Future<List<ParkingSlot>> getAvailableSlots();
 
-  /// Fetch all parking slots (available and occupied) from the server
-  Future<List<ParkingSlot>> getAllSlots();
+  /// Get all occupied slots
+  Future<List<ParkingSlot>> getOccupiedSlots();
 
-  /// Park a vehicle in the specified slot and create a ticket via API
-  Future<ParkingTicket> parkVehicle(int slotId, Vehicle vehicle);
-
-  /// Unpark a vehicle and get the final calculated price from the server
-  Future<num> unparkVehicle(ParkingTicket ticket);
-
-  /// Fetch all currently active parking tickets from the server
-  Future<List<ParkingTicket>> getActiveTickets();
-
-  /// Get the current traffic level (occupancy percentage) from the server
-  Future<double> getTrafficLevel();
+  /// Get parking lot status
+  Future<Map<String, dynamic>> getParkingLotStatus();
 }

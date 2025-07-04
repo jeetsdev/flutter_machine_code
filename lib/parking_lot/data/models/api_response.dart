@@ -1,27 +1,29 @@
 class ApiResponse<T> {
-  final T data;
-  final String status;
+  final bool success;
   final String message;
+  final T? data;
 
   ApiResponse({
-    required this.data,
-    required this.status,
+    required this.success,
     required this.message,
+    this.data,
   });
 
-  factory ApiResponse.fromJson(Map<String, dynamic> json, T Function(dynamic) fromJson) {
+  factory ApiResponse.fromJson(
+      Map<String, dynamic> json, T Function(Map<String, dynamic>) fromJson) {
     return ApiResponse(
-      data: fromJson(json['data']),
-      status: json['status'] as String,
+      success: json['success'] as bool,
       message: json['message'] as String,
+      data: json['data'] != null
+          ? fromJson(json['data'] as Map<String, dynamic>)
+          : null,
     );
   }
 
-  Map<String, dynamic> toJson(Map<String, dynamic> Function(T) toJson) {
-    return {
-      'data': toJson(data),
-      'status': status,
-      'message': message,
-    };
+  factory ApiResponse.error(String message) {
+    return ApiResponse(
+      success: false,
+      message: message,
+    );
   }
 }

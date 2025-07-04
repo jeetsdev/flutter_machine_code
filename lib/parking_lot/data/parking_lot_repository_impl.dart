@@ -6,7 +6,8 @@ class ParkingLotRepositoryImpl implements ParkingLotRepository {
   final int capacity;
 
   ParkingLotRepositoryImpl({this.capacity = 10})
-      : _slots = List.generate(10, (index) => ParkingSlot(id: index + 1));
+      : _slots =
+            List.generate(capacity, (index) => ParkingSlot(id: index + 10));
 
   @override
   List<ParkingSlot> getAllSlots() => _slots;

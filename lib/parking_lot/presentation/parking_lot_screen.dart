@@ -32,7 +32,10 @@ class _ParkingLotScreenState extends State<ParkingLotScreen> {
     final error = _service.bookSlot(_selectedSlotId, _vehicleController.text);
     if (error == null) {
       _observer.onSlotBooked(context, _selectedSlotId!);
-      setState(() {});
+      setState(() {
+        _selectedSlotId = null;
+        _vehicleController.clear();
+      });
     } else {
       _notificationService.showNotification(context, error);
     }

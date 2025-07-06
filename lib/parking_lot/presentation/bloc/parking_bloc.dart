@@ -3,9 +3,12 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test_app/parking_lot/domain/usecases/get_active_tickets_use_case.dart';
+import 'package:test_app/parking_lot/domain/usecases/get_all_slots_use_case.dart';
+import 'package:test_app/parking_lot/domain/usecases/park_vehicle_use_case.dart';
+import 'package:test_app/parking_lot/domain/usecases/unpark_vehicle_use_case.dart';
 
 import '../../domain/strategies/pricing_strategies.dart';
-import '../../domain/usecases/parking_usecases.dart';
 import 'parking_event.dart';
 import 'parking_state.dart';
 

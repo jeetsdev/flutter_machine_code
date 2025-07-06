@@ -1,15 +1,12 @@
-
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 
 import '../../../core/network/dio_client.dart';
 import '../models/api_response.dart';
 
-
-extension ResponseX on Response{
-  bool get isSuccess => statusCode != null && statusCode! >= 200 && statusCode! < 300;
+extension ResponseX on Response {
+  bool get isSuccess =>
+      statusCode != null && statusCode! >= 200 && statusCode! < 300;
 }
 
 @injectable
@@ -18,8 +15,7 @@ class ParkingRemoteSource {
 
   ParkingRemoteSource(this._dioClient);
 
-  Future<ApiResponse> getAvailableSlots() async {
-
+  Future<ApiResponse<List<Map<String, dynamic>>>> getAvailableSlots() async {
     // final Uri uri = Uri.parse('${_dioClient.baseUrl}/slots/available').replace(
     //   queryParameters: {
     //     'ts': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -29,8 +25,7 @@ class ParkingRemoteSource {
     // final requestBody = json.encode({
     //   'includeVip': false,
     //   'includeOccupied': false,
-    // }); 
-    
+    // });
 
     // final Response response = await _dioClient.post(
     //   uri.toString(),
@@ -60,7 +55,7 @@ class ParkingRemoteSource {
     );
   }
 
-  Future<ApiResponse> getAllSlots() async {
+  Future<ApiResponse<List<Map<String, dynamic>>>> getAllSlots() async {
     await Future.delayed(const Duration(milliseconds: 100));
     return ApiResponse(
       data: [
@@ -76,7 +71,7 @@ class ParkingRemoteSource {
     );
   }
 
-  Future<ApiResponse> parkVehicle(int slotId) async {
+  Future<ApiResponse<Map<String, dynamic>>> parkVehicle(int slotId) async {
     await Future.delayed(const Duration(milliseconds: 200));
     return ApiResponse(
       data: {
@@ -89,7 +84,7 @@ class ParkingRemoteSource {
     );
   }
 
-  Future<ApiResponse> unparkVehicle(
+  Future<ApiResponse<Map<String, dynamic>>> unparkVehicle(
       String ticketId) async {
     await Future.delayed(const Duration(milliseconds: 200));
     return ApiResponse(
@@ -103,7 +98,7 @@ class ParkingRemoteSource {
     );
   }
 
-  Future<ApiResponse> getActiveTickets() async {
+  Future<ApiResponse<List<Map<String, dynamic>>>> getActiveTickets() async {
     await Future.delayed(const Duration(milliseconds: 100));
     return ApiResponse(
       data: [
@@ -120,7 +115,7 @@ class ParkingRemoteSource {
     );
   }
 
-  Future<ApiResponse> getTrafficLevel() async {
+  Future<ApiResponse<Map<String, dynamic>>> getTrafficLevel() async {
     await Future.delayed(const Duration(milliseconds: 50));
     return ApiResponse(
       data: {

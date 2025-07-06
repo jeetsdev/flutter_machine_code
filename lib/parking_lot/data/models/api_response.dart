@@ -3,8 +3,8 @@ import 'package:json_annotation/json_annotation.dart';
 part 'api_response.g.dart';
 
 @JsonSerializable()
-class ApiResponse {
-  final dynamic data;
+class ApiResponse<T> {
+  final T data;
   final String status;
   final String message;
   final bool? error;
